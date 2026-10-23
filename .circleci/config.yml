@@ -41,9 +41,7 @@ jobs:
     steps:
       - run:
           name: Trigger Render deployment
-          command: |
-            curl --fail --silent --show-error \
-              --request POST "$RENDER_DEPLOY_HOOK"
+          command: 'curl --fail --show-error --request POST "$RENDER_DEPLOY_HOOK"'
 
 workflows:
   nextjs-ci:
