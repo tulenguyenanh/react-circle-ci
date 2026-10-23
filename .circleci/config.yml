@@ -24,6 +24,10 @@ jobs:
             - ~/.npm
 
       - run:
+          name: Dependency security audit
+          command: npm audit --audit-level=high
+
+      - run:
           name: Build
           command: npm run build
 
@@ -34,6 +38,29 @@ jobs:
       - run:
           name: Lint
           command: npm run lint --if-present
+
+  security-scan:
+    docker:
+      - image: semgrep/semgrep
+    steps:
+      - checkout
+      - run:
+          name: Static application security testing
+          command: semgrep scan --config auto --error .
+
+  secret-scan:
+    docker:
+      - image: zricethezav/gitleaks:latest
+    steps:
+      - checkout
+      - run:
+          name: Scan for leaked secrets
+          command: |
+            gitleaks detect \
+              --source . \
+              --redact \
+              --verbose \
+              --exit-code 1
 
   deploy:
     docker:
@@ -47,10 +74,14 @@ workflows:
   nextjs-ci:
     jobs:
       - build
+      - security-scan
+      - secret-scan
 
       - deploy:
           requires:
             - build
+            - security-scan
+            - secret-scan
           filters:
             branches:
               only: main
