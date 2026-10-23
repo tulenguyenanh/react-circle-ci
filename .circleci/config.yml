@@ -1,0 +1,58 @@
+
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: cimg/node:24.18
+    working_directory: ~/project
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - npm-v1-{{ checksum "package-lock.json" }}
+            - npm-v1-
+
+      - run:
+          name: Install dependencies
+          command: npm ci
+
+      - save_cache:
+          key: npm-v1-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+
+      - run:
+          name: Build
+          command: npm run build
+
+      - run:
+          name: Test
+          command: npm run test --if-present
+
+      - run:
+          name: Lint
+          command: npm run lint --if-present
+
+  deploy:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: Trigger Render deployment
+          command: |
+            curl --fail --silent --show-error \
+              --request POST "$RENDER_DEPLOY_HOOK"
+
+workflows:
+  nextjs-ci:
+    jobs:
+      - build
+
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: main
